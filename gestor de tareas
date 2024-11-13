@@ -1,0 +1,206 @@
+import os
+
+# Función para limpiar la pantalla de la consola
+def limpiar_pantalla():
+    os.system('cls')  # Ejecuta el comando 'cls' en Windows para limpiar la consola
+
+# Clase Tarea para representar una tarea con nombre, descripción y prioridad
+class Tarea:
+    def __init__(self, nombre, descripcion, prioridad):
+        # Inicializa los atributos de la tarea y realiza validaciones
+        self.nombre = nombre.strip()  # Elimina espacios en blanco del nombre
+        self.descripcion = descripcion.strip()  # Elimina espacios en blanco de la descripción
+        self.prioridad = prioridad.lower()  # Convierte la prioridad a minúsculas
+
+        # Validación: verifica que el nombre no esté vacío
+        if not self.nombre:
+            raise ValueError("El nombre no puede estar vacío")
+
+        # Validación: verifica que la descripción no esté vacía
+        if not self.descripcion:
+            raise ValueError("La descripción no puede estar vacía")
+
+        # Validación: verifica que la prioridad sea válida
+        if not self.validar_prioridad(self.prioridad):
+            raise ValueError("La prioridad debe ser alta, media o baja")
+
+    # Método estático para validar que la prioridad es 'alta', 'media' o 'baja'
+    @staticmethod
+    def validar_prioridad(prioridad):
+        return prioridad in ["alta", "media", "baja"]
+
+# Clase GestorTareas para gestionar las tareas por prioridad
+class GestorTareas:
+    def __init__(self):
+        # Inicializa listas para cada nivel de prioridad
+        self.tareas_alta = []    # Tareas de alta prioridad (Pila - LIFO)
+        self.tareas_media = []   # Tareas de media prioridad (Cola - FIFO)
+        self.tareas_baja = []    # Tareas de baja prioridad (Lista estándar)
+        self.archivo_tareas = "tareas.txt"  # Nombre del archivo de almacenamiento
+        self.cargar_tareas()  # Carga tareas desde el archivo al iniciar
+
+    # Método para agregar una nueva tarea
+    def agregar_tarea(self, nombre, descripcion, prioridad):
+        try:
+            nueva_tarea = Tarea(nombre, descripcion, prioridad)  # Crea la tarea
+
+            # Comprueba si la tarea ya existe en alguna lista
+            for lista in [self.tareas_alta, self.tareas_media, self.tareas_baja]:
+                for tarea in lista:
+                    if tarea.nombre == nombre:
+                        print(f"❌ La tarea '{nombre}' ya existe")
+                        return
+
+            # Agrega la tarea en la lista correspondiente según su prioridad
+            if prioridad == "alta":
+                self.tareas_alta.append(nueva_tarea)
+            elif prioridad == "media":
+                self.tareas_media.append(nueva_tarea)
+            else:
+                self.tareas_baja.append(nueva_tarea)
+
+            print(f"\n✅ Tarea '{nombre}' agregada con éxito")
+            self.guardar_tareas()  # Guarda los cambios en el archivo
+        except ValueError as e:
+            print(f"❌ Error al agregar tarea: {e}")
+
+    # Método para eliminar una tarea por su nombre
+    def eliminar_tarea(self, nombre):
+        # Busca la tarea en cada lista de prioridades
+        for lista in [self.tareas_alta, self.tareas_media, self.tareas_baja]:
+            for tarea in lista:
+                if tarea.nombre == nombre:
+                    lista.remove(tarea)  # Elimina la tarea si se encuentra
+                    print(f"\n✅ Tarea '{nombre}' eliminada con éxito")
+                    self.guardar_tareas()  # Guarda los cambios en el archivo
+                    return
+        print(f"\n❌ No se encontró la tarea '{nombre}'")
+
+    # Método para mostrar todas las tareas según su prioridad
+    def mostrar_tareas(self):
+        if not (self.tareas_alta or self.tareas_media or self.tareas_baja):
+            print("\n📝 No hay tareas pendientes")
+            return
+
+        print("\n--- LISTA DE TAREAS ---")
+
+        # Muestra las tareas de alta prioridad en orden LIFO
+        print("\n📋 Tareas de alta prioridad (LIFO):")
+        for tarea in reversed(self.tareas_alta):
+            print(f"- {tarea.nombre}: {tarea.descripcion}")
+
+        # Muestra las tareas de media prioridad en orden FIFO
+        print("\n📋 Tareas de media prioridad (FIFO):")
+        for tarea in self.tareas_media:
+            print(f"- {tarea.nombre}: {tarea.descripcion}")
+
+        # Muestra las tareas de baja prioridad en orden de lista estándar
+        print("\n📋 Tareas de baja prioridad:")
+        for tarea in self.tareas_baja:
+            print(f"- {tarea.nombre}: {tarea.descripcion}")
+
+    # Método para procesar y eliminar tareas en el orden de prioridad
+    def procesar_tareas(self):
+        if not (self.tareas_alta or self.tareas_media or self.tareas_baja):
+            print("\n📝 No hay tareas para procesar")
+            return
+
+        print("\n🔄 Procesando tareas...")
+
+        # Procesa y elimina las tareas de alta prioridad (LIFO)
+        while self.tareas_alta:
+            tarea = self.tareas_alta.pop()
+            print(f"⚡ Procesando tarea de alta prioridad: {tarea.nombre} - {tarea.descripcion}")
+
+        # Procesa y elimina las tareas de media prioridad (FIFO)
+        while self.tareas_media:
+            tarea = self.tareas_media.pop(0)
+            print(f"⚡ Procesando tarea de media prioridad: {tarea.nombre} - {tarea.descripcion}")
+
+        # Procesa y elimina las tareas de baja prioridad en orden
+        while self.tareas_baja:
+            tarea = self.tareas_baja.pop(0)
+            print(f"⚡ Procesando tarea de baja prioridad: {tarea.nombre} - {tarea.descripcion}")
+
+        print("✅ Todas las tareas han sido procesadas")
+        self.guardar_tareas()  # Guarda los cambios en el archivo
+
+    # Método para guardar las tareas en un archivo
+    def guardar_tareas(self):
+        try:
+            with open(self.archivo_tareas, "w") as archivo:
+                # Guarda cada tarea en el archivo con formato CSV
+                for lista in [self.tareas_alta, self.tareas_media, self.tareas_baja]:
+                    for tarea in lista:
+                        archivo.write(f"{tarea.nombre},{tarea.descripcion},{tarea.prioridad}\n")
+        except IOError as e:
+            print(f"❌ Error al guardar tareas: {e}")
+
+    # Método para cargar tareas desde un archivo al iniciar
+    def cargar_tareas(self):
+        if not os.path.exists(self.archivo_tareas):
+            return  # Retorna si el archivo no existe
+
+        try:
+            with open(self.archivo_tareas, "r") as archivo:
+                # Carga y agrega cada tarea en la lista correspondiente
+                for linea in archivo:
+                    nombre, descripcion, prioridad = linea.strip().split(",")
+                    self.agregar_tarea(nombre, descripcion, prioridad)
+        except Exception as e:
+            print(f"❌ Error al cargar tareas: {e}")
+
+# Función para mostrar el menú principal
+def mostrar_menu():
+    print("========================")
+    print("=== GESTOR DE TAREAS ===")
+    print("========================")
+    print("1️⃣. Agregar tarea")
+    print("2️⃣. Eliminar tarea")
+    print("3️⃣. Mostrar tareas")
+    print("4️⃣. Procesar tareas")
+    print("5️⃣. Salir")
+    print("========================")
+
+# Función principal que controla la ejecución del programa
+def main():
+    gestor = GestorTareas()  # Crea una instancia de GestorTareas
+
+    while True:
+        limpiar_pantalla()  # Limpia la pantalla de la consola
+        mostrar_menu()  # Muestra el menú principal
+        opcion = input("\nElige una opción (1-5): ")  # Pide una opción al usuario
+
+        if opcion == "1":
+            # Agrega una tarea
+            nombre = input("Nombre de la tarea: ")
+            descripcion = input("Descripción de la tarea: ")
+            prioridad = input("Prioridad (alta/media/baja): ")
+            gestor.agregar_tarea(nombre, descripcion, prioridad)
+
+        elif opcion == "2":
+            # Elimina una tarea
+            nombre = input("Nombre de la tarea a eliminar: ")
+            gestor.eliminar_tarea(nombre)
+
+        elif opcion == "3":
+            # Muestra todas las tareas
+            gestor.mostrar_tareas()
+
+        elif opcion == "4":
+            # Procesa todas las tareas
+            gestor.procesar_tareas()
+
+        elif opcion == "5":
+            limpiar_pantalla()  # Limpia la pantalla antes de salir
+            print("👋 ¡Hasta luego!")
+            break  # Sale del bucle y termina el programa
+
+        else:
+            print("❌ Opción no válida. Por favor, elige una opción del 1 al 5.")
+
+        input("\nPresiona Enter para continuar...")  # Pausa para ver el resultado antes de continuar
+
+# Ejecuta el programa
+if __name__ == "__main__":
+    main()
